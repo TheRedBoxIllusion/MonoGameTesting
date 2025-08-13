@@ -97,7 +97,7 @@ namespace MonoGameTesting
             new Block(textureFromColor(Color.White)), //Air: ID = 0
             new Block(new List<Texture2D>{Content.Load<Texture2D>("Stone1"), Content.Load<Texture2D>("Stone2")}), // Stone: ID = 1
             new Block(textureFromColor(Color.Blue)), //Dirt: ID = 2
-            new Block(textureFromColor(Color.Red), 255, (1, 0, 0)) //Ore: ID = 3
+            new Block(textureFromColor(Color.Red), 255) //Ore: ID = 3
             });
 
             worldContext.calculateInitialLightLevels();
@@ -142,9 +142,9 @@ namespace MonoGameTesting
                     if (x + screenOffsetInBlocks.x >= 0 && y + screenOffsetInBlocks.y >= 0 && x + screenOffsetInBlocks.x < tempBlockArray.GetLength(0) && y + screenOffsetInBlocks.y < tempBlockArray.GetLength(1))
                     {
                         
-                            (int r, int g, int b) lightLevel = worldContext.lightLevelArray[x + screenOffsetInBlocks.x, y + screenOffsetInBlocks.y];
+                            int lightLevel = worldContext.lightLevelArray[x + screenOffsetInBlocks.x, y + screenOffsetInBlocks.y];
                         
-                            _spriteBatch.Draw(worldContext.getBlockFromID(tempBlockArray[x + screenOffsetInBlocks.x, y + screenOffsetInBlocks.y]).getTexture((x + screenOffsetInBlocks.x) + (3 * tempBlockArray.GetLength(0) + 56) * (y + screenOffsetInBlocks.y)), new Rectangle(pixelsPerBlock * x - remainderOffset.x, pixelsPerBlock * y - remainderOffset.y, pixelsPerBlock, pixelsPerBlock), new Color(lightLevel.r, lightLevel.g, lightLevel.b));
+                            _spriteBatch.Draw(worldContext.getBlockFromID(tempBlockArray[x + screenOffsetInBlocks.x, y + screenOffsetInBlocks.y]).getTexture((x + screenOffsetInBlocks.x) + (3 * tempBlockArray.GetLength(0) + 56) * (y + screenOffsetInBlocks.y)), new Rectangle(pixelsPerBlock * x - remainderOffset.x, pixelsPerBlock * y - remainderOffset.y, pixelsPerBlock, pixelsPerBlock), new Color(lightLevel, lightLevel, lightLevel));
                     }
                 }
             }
@@ -162,7 +162,7 @@ namespace MonoGameTesting
         List<Block> blockList;
         public int[,] blockArray { get; set; }
 
-        public (int r, int g, int b)[,] lightLevelArray { get; set; } //0-255 value for the light level of each block. the 3 values are the color of the light The blockSizeInMeters variable controls how slowly the light falls off
+        public int[,] lightLevelArray { get; set; } //0-255 value for the light level of each block. the 3 values are the color of the light The blockSizeInMeters variable controls how slowly the light falls off
 
         int[,] oreArray;
 
@@ -197,7 +197,7 @@ namespace MonoGameTesting
             brownianMotionArray = new BlockGenerationVariables[worldDimensions.width, worldDimensions.height];
             blockArray = new int[worldDimensions.width, worldDimensions.height];
             oreArray = new int[worldDimensions.width, worldDimensions.height];
-            lightLevelArray = new (int, int, int)[worldDimensions.width, worldDimensions.height];
+            lightLevelArray = new int[worldDimensions.width, worldDimensions.height];
 
             perlinNoise(worldDimensions, perlinNoiseIterations, octaveWeights, frequency, vectorCount);
             seededBrownianMotion(oresArray, brownianAttemptCount);
@@ -208,13 +208,13 @@ namespace MonoGameTesting
 
         public void calculateInitialLightLevels() {
             double blockSizeInMeters = 0.05;
+           
             for (int xBlock = 0; xBlock < blockArray.GetLength(0); xBlock++) {
                 for (int yBlock = 0; yBlock < blockArray.GetLength(1); yBlock++)
                 {
                     if (getBlockFromID(blockArray[xBlock, yBlock]).lightPower > 0) {
                         int blockLightPower = getBlockFromID(blockArray[xBlock, yBlock]).lightPower;
-                        (int r, int g, int b) colorWeights = getBlockFromID(blockArray[xBlock, yBlock]).colorWeights;
-                        System.Diagnostics.Debug.WriteLine(colorWeights);
+                        
                         //calculate the light's effect radius using I = power/4Pi * r^2 where I = 1 (When Math.Floor goes to 0)
                         //R = Sqrt power/4PII
                         int Radius = (int)Math.Sqrt(blockLightPower/(4 * Math.PI * blockSizeInMeters));
@@ -232,17 +232,11 @@ namespace MonoGameTesting
                                             lightPenetration = 0;
                                         }
                                         int lightLevelPower = (int)(blockLightPower / (4 * Math.PI * Math.Pow(currentRadius, 2) * (blockSizeInMeters + lightPenetration) + 0.1)); //+0.1 to prevent divide by 0 error, will immediately get canceled out by the (int)
-                                        lightLevelArray[xBlock + x, yBlock + y] = (colorWeights.r * lightLevelPower, colorWeights.g * lightLevelPower, colorWeights.b * lightLevelPower);
+                                        lightLevelArray[xBlock + x, yBlock + y] += (lightLevelPower);
 
-                                        if (lightLevelArray[xBlock + x, yBlock + y].r > 255)
+                                        if (lightLevelArray[xBlock + x, yBlock + y] > 255)
                                         {
-                                            lightLevelArray[xBlock + x, yBlock + y].r = 255;
-                                        } else if (lightLevelArray[xBlock + x, yBlock + y].g > 255)
-                                        {
-                                            lightLevelArray[xBlock + x, yBlock + y].g = 255;
-                                        } else if (lightLevelArray[xBlock + x, yBlock + y].b > 255)
-                                        {
-                                            lightLevelArray[xBlock + x, yBlock + y].b = 255;
+                                            lightLevelArray[xBlock + x, yBlock + y] = 255;
                                         }
                                     }
                                 }
